@@ -1,4 +1,6 @@
+import { useEffect, useState } from "react";
 import { NavButton, useNav, type Route } from "./router";
+import { checkForUpdate, markStarted } from "./updater";
 import { useAppState, useStoreApi } from "./useStore";
 import Today from "./screens/Today";
 import Cafes from "./screens/Cafes";
@@ -43,9 +45,29 @@ export default function App() {
   const store = useStoreApi();
   const { route } = useNav();
   const current = TAB_OF[route.name];
+  const [update, setUpdate] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!ready) return;
+    markStarted();
+    let live = true;
+    const check = () => checkForUpdate().then((v) => live && v && setUpdate(v));
+    check();
+    const onVisible = () => document.visibilityState === "visible" && check();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      live = false;
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [ready]);
 
   return (
     <div className="min-h-full bg-bg font-sans text-ink antialiased">
+      {update && (
+        <button type="button" onClick={() => location.reload()} className="sticky top-[env(safe-area-inset-top,0px)] z-20 w-full bg-accent px-4 py-3 text-sm font-semibold text-accent-ink" data-testid="update-banner">
+          ✨ New version ready — tap to update
+        </button>
+      )}
       {error && (
         <button type="button" onClick={store.dismissError} className="sticky top-[env(safe-area-inset-top,0px)] z-20 w-full bg-danger px-4 py-3 text-left text-sm font-semibold text-white">
           {error} <span className="opacity-80">(tap to dismiss)</span>

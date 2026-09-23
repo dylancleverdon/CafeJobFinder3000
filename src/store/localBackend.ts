@@ -1,5 +1,6 @@
 import type { Photo } from "@/lib/types";
 import type { Backend, CafeDoc, Meta } from "./backend";
+import { idbPhotos } from "./idb";
 
 /**
  * Fallback when the app is opened outside Claude (a saved copy, tests):
@@ -58,13 +59,20 @@ export function localBackend(storage: Storage | null = safeStorage()): Backend {
       const snapshot = meta();
       metaListeners.forEach((l) => l(snapshot));
     },
+    // Photos go to IndexedDB when the browser has it (lots more room than localStorage).
     async photosFor(cafeId) {
+      if (idbPhotos.available()) return idbPhotos.forCafe<Photo>(cafeId);
       return read<Photo[]>(KEY.photos, []).filter((p) => p.cafeId === cafeId);
     },
     async allPhotos() {
+      if (idbPhotos.available()) return idbPhotos.all<Photo>();
       return read<Photo[]>(KEY.photos, []);
     },
     async writePhoto(photo) {
+      if (idbPhotos.available()) {
+        await ("deleted" in photo ? idbPhotos.delete(photo.id) : idbPhotos.put(photo));
+        return;
+      }
       const list = read<Photo[]>(KEY.photos, []).filter((p) => p.id !== photo.id);
       if (!("deleted" in photo)) list.push(photo);
       write(KEY.photos, list);

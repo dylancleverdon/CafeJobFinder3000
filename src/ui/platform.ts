@@ -1,5 +1,7 @@
 // Thin wrappers over the Claude artifact runtime (window.claude), with
 // fallbacks so the app also runs as a plain web page (tests, saved copy).
+import { isNativeApp, shareFile } from "./native";
+
 type Downloads = { save(req: { filename: string; data: string | Blob }): Promise<unknown> };
 type ClaudeRuntime = { use(name: string): Promise<unknown> };
 
@@ -20,6 +22,7 @@ export async function getCapability<T>(name: string): Promise<T | null> {
 
 /** Offers a file to save. Returns false if this view can't save files. */
 export async function saveFile(filename: string, data: string, type = "application/json"): Promise<boolean> {
+  if (isNativeApp()) return shareFile(filename, data);
   const downloads = await getCapability<Downloads>("downloads");
   if (downloads) {
     await downloads.save({ filename, data: new Blob([data], { type }) });

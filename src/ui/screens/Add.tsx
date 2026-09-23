@@ -7,6 +7,8 @@ import { CATEGORY_LABEL } from "@/lib/labels";
 import { downscalePhoto } from "@/lib/client/photo";
 import { areaLabel } from "@/lib/neighborhoods";
 import type { Store } from "@/store/store";
+import { canUseGps, getPosition } from "../native";
+import { nearestZip } from "@/lib/nearestZip";
 
 type Tab = "link" | "spotted" | "manual";
 type Result = { id: string; duplicate: boolean; pinUpdated?: boolean };
@@ -196,10 +198,34 @@ function Spotted({ pending, onSave }: { pending: boolean; onSave: (fn: (s: Store
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<string | null>(null);
   const [category, setCategory] = useState<Category>("coffee");
+  const [here, setHere] = useState<{ lat: number; lng: number } | null>(null);
+  const [gpsMsg, setGpsMsg] = useState<string | null>(null);
+  const { cafes } = useAppState();
+
+  const locate = async () => {
+    setGpsMsg("Finding you…");
+    try {
+      const p = await getPosition();
+      setHere(p);
+      const z = nearestZip(p, new Set(cafes.map((c) => c.zip).filter(Boolean) as string[]));
+      if (z) setZip(z);
+      setGpsMsg("📍 Got your spot — the pin will be exact");
+    } catch (e) {
+      setGpsMsg(e instanceof Error ? e.message : "Couldn't get your location");
+    }
+  };
 
   return (
     <div className="card space-y-3 p-4">
       <p className="text-sm text-muted">Walking or driving past somewhere? Jot it down in a few seconds.</p>
+      {canUseGps() && (
+        <div>
+          <button type="button" className="btn-soft w-full" onClick={locate}>
+            📍 I&apos;m standing here
+          </button>
+          {gpsMsg && <p className="mt-1 text-sm text-muted">{gpsMsg}</p>}
+        </div>
+      )}
       <label className="block">
         <span className="label">Name</span>
         <input id="spot-name" className="input" value={name} onChange={(e) => setName(e.target.value)} placeholder="What's on the sign?" />
@@ -239,7 +265,19 @@ function Spotted({ pending, onSave }: { pending: boolean; onSave: (fn: (s: Store
         disabled={pending || !name.trim()}
         onClick={() =>
           onSave(async (s) => {
-            const res = await s.createCafe({ name, address: where || null, zip: zip || null, hiringSign: hiring, notes: note, category, source: "spotted", stage: "to_visit" });
+            const res = await s.createCafe({
+              name,
+              address: where || null,
+              zip: zip || null,
+              lat: here?.lat ?? null,
+              lng: here?.lng ?? null,
+              exactPin: !!here,
+              hiringSign: hiring,
+              notes: note,
+              category,
+              source: "spotted",
+              stage: "to_visit",
+            });
             if (photo && !res.duplicate) await store.addPhoto(res.id, photo);
             return res;
           })

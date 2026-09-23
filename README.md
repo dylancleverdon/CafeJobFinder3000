@@ -1,8 +1,14 @@
 # ☕ Cafe Job Finder 3000
 
-A personal CRM for landing a barista job in Seattle **without job boards**. It runs as a private app inside your Claude account. There's nothing to install or host, and nothing to set up.
+A personal CRM for landing a barista job in Seattle **without job boards**.
 
-**Open it:** https://claude.ai/artifact/MDGaFSA4CQRXsb3jmomuLt (only you can open it while you're signed in to Claude). On your phone, open that link in the Claude app or your browser. You can add it to your home screen from the browser's share menu.
+## Get the app
+
+**Android (APK):** on your phone, open
+**https://github.com/dylancleverdon/CafeJobFinder3000/releases/latest/download/CafeJobFinder.apk**
+and tap **Install**. The first time, Android asks you to allow installing from your browser. Say yes. That's it: no accounts, no setup. The app updates itself (tap the "New version ready" banner) and never needs downloading again.
+
+**Also available inside Claude:** https://claude.ai/artifact/MDGaFSA4CQRXsb3jmomuLt (private to you). It keeps its own separate data. Use **More → Download backup / Restore** to move data between the two.
 
 ## What it does
 
@@ -13,13 +19,14 @@ A personal CRM for landing a barista job in Seattle **without job boards**. It r
 
 ## Your data
 
-Your changes (stages, notes, visit history, photos, cafes you add) are saved to the app's own database in your Claude account. The same data shows on every device you open it on. **Updates never touch it.** For extra peace of mind: **More → Download backup**.
+- **Android app:** saved on your phone. Updates never touch it. It's only erased if you uninstall the app, so use **More → Download backup** now and then.
+- **Claude version:** saved in your Claude account.
 
-Because it runs inside Claude, the app can't use your phone's GPS or show a street map. Cafes are grouped by neighborhood, and Google Maps handles turn-by-turn directions.
+Only the Android app can use GPS ("I'm standing here", routes from where you are). Claude blocks it inside Claude. Cafes are grouped by neighborhood, and Google Maps handles turn-by-turn directions.
 
 ## Updating
 
-Ask Claude for a change. Claude rebuilds and republishes the same link, and the new version appears the next time you open it (or within moments if it's already open). There's nothing to download.
+Ask Claude for a change. For screens and features, Claude pushes the new version to this repo and your installed app downloads it by itself, showing a **"New version ready — tap to update"** banner. The Claude version updates at the same link. A new APK is only needed if the Android shell itself changes, and even then it installs over the old one and keeps your data.
 
 To refresh the cafe list when Seattle posts a newer license export: download the *Active Business License Tax Certificate* CSV from [data.seattle.gov](https://data.seattle.gov/browse?q=Active%20Business%20License%20Tax%20Certificate) and upload it in **More → Import**. You'll see what's new and what might have closed before anything changes.
 
@@ -35,7 +42,11 @@ npm run build             # → dist/cafe-job-finder.html (the whole app in one 
 CHROMIUM_PATH=/opt/pw-browsers/chromium npm run test:e2e   # phone-sized Playwright test of dist/preview.html
 ```
 
-- **Stack:** React 19 + Tailwind 4, bundled by esbuild into a single HTML file (`scripts/build-artifact.mjs`) and published as a Claude artifact. Data goes through the artifact `db` capability (`src/store/claudeBackend.ts`). Outside Claude, it falls back to `localStorage` (`src/store/localBackend.ts`).
+- **Stack:** React 19 + Tailwind 4, bundled by esbuild into a single HTML file (`scripts/build-artifact.mjs`).
+  - **Android:** Capacitor shell in `android/`, built by GitHub Actions (`.github/workflows/android.yml`) into a GitHub Release. Over-the-air updates: the app checks `app/version.json` on `main` and downloads `app/cafe-job-finder.html` (`src/ui/updater.ts`). The start-up script in the APK runs the newest copy and falls back to the built-in one if a copy ever fails to start.
+  - **Claude artifact:** data through the artifact `db` capability (`src/store/claudeBackend.ts`).
+  - **Android / plain browser:** `localStorage` + IndexedDB for photos (`src/store/localBackend.ts`).
+- **Signing key:** `android/app/cafejobs-release.p12` is committed on purpose, so any build can produce an update that installs over the previous one without the owner managing secrets. The repo is public, so it only protects against accidents. To harden it, move the key into a repository secret.
 - **Where things are:**
   - `src/lib/import/seattleLicense.ts` decides what counts as "might sell coffee"
   - `src/lib/followup.ts` has the follow-up rules

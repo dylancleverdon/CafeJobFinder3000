@@ -11,6 +11,7 @@ import { zipCentroid } from "@/lib/geocode/zipCentroid";
 import { formatClock, ROUTE_MODE_LABEL, type RouteMode } from "@/lib/route/plan";
 import { formatDistance, formatMinutes } from "@/lib/route/geo";
 import { directionsUrl, planAreaRoute, type AreaStep, type AreaStopInput } from "@/lib/route/areaPlan";
+import { canUseGps, getPosition } from "../native";
 
 function nextHalfHour(): string {
   const d = new Date(Date.now() + 15 * 60_000);
@@ -55,8 +56,9 @@ export default function Route() {
     const [h, m] = r.departAt.split(":").map(Number);
     const depart = new Date();
     depart.setHours(h, m, 0, 0);
-    return planAreaRoute({ stops, mode: r.mode, start: zipCentroid(r.startZip), departAt: depart, dwellMinutes: settings.dwellMinutes, window: { start: settings.windowStart, end: settings.windowEnd } });
-  }, [r.stopIds, r.mode, r.departAt, r.startZip, byId, settings.dwellMinutes, settings.windowStart, settings.windowEnd]);
+    const start = r.startLat != null && r.startLng != null ? { lat: r.startLat, lng: r.startLng } : zipCentroid(r.startZip);
+    return planAreaRoute({ stops, mode: r.mode, start, departAt: depart, dwellMinutes: settings.dwellMinutes, window: { start: settings.windowStart, end: settings.windowEnd } });
+  }, [r.stopIds, r.mode, r.departAt, r.startZip, r.startLat, r.startLng, byId, settings.dwellMinutes, settings.windowStart, settings.windowEnd]);
 
   if (!cafes.length) return <EmptyState title="No cafes yet" />;
 
@@ -110,8 +112,24 @@ export default function Route() {
         <div className="grid grid-cols-2 gap-2">
           <label>
             <span className="label">Starting from</span>
-            <select id="route-start" className="input text-sm" value={r.startZip ?? ""} onChange={(e) => save({ startZip: e.target.value || null })}>
+            <select
+              id="route-start"
+              className="input text-sm"
+              value={r.startLat != null ? "__gps" : r.startZip ?? ""}
+              onChange={async (e) => {
+                const v = e.target.value;
+                if (v === "__gps") {
+                  try {
+                    const p = await getPosition();
+                    save({ startLat: p.lat, startLng: p.lng, startZip: null });
+                  } catch {
+                    save({ startLat: null, startLng: null });
+                  }
+                } else save({ startZip: v || null, startLat: null, startLng: null });
+              }}
+            >
               <option value="">First stop</option>
+              {canUseGps() && <option value="__gps">📍 My location</option>}
               {areaCounts.map(([z]) => (
                 <option key={z} value={z}>
                   {areaLabel(z)}

@@ -11,6 +11,9 @@ export type RouteState = {
   stopIds: string[];
   doneIds: string[];
   startZip: string | null;
+  /** Set when "My location" (GPS, Android app only) is the starting point. */
+  startLat?: number | null;
+  startLng?: number | null;
   departAt: string; // "HH:MM"
   active: boolean;
 };

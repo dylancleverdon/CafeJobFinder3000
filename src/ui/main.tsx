@@ -27,4 +27,7 @@ async function start() {
   );
 }
 
-void start();
+// In the Android app, the start-up script may hand over to a newer downloaded version instead.
+const w = window as unknown as { __CJF_SKIP__?: boolean; __CJF_START__?: () => void };
+if (w.__CJF_SKIP__) w.__CJF_START__ = () => void start();
+else void start();

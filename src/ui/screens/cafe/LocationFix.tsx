@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { Cafe } from "@/lib/types";
 import { googleMapsSearchUrl } from "@/lib/text";
 import { useStoreApi } from "../../useStore";
+import { canUseGps, getPosition } from "../../native";
 
 /** Exact pins come from Google Maps links (the app can't use GPS inside Claude). */
 export default function LocationFix({ cafe }: { cafe: Cafe }) {
@@ -19,8 +20,27 @@ export default function LocationFix({ cafe }: { cafe: Cafe }) {
       <p className="text-sm text-muted">
         {cafe.pinQuality === "exact"
           ? "Route times use this cafe's exact spot."
-          : "Routes group this cafe by neighborhood. For exact walking times, open it in Google Maps, copy the link from the address bar (the long one), and paste it here."}
+          : canUseGps()
+            ? "Routes group this cafe by neighborhood. When you're standing at it, tap “I'm here” for an exact pin."
+            : "Routes group this cafe by neighborhood. For exact walking times, open it in Google Maps, copy the link from the address bar (the long one), and paste it here."}
       </p>
+      {canUseGps() && (
+        <button
+          type="button"
+          className="btn-ghost mt-3 w-full"
+          onClick={async () => {
+            try {
+              const p = await getPosition();
+              await store.setCafeLocation(cafe.id, p.lat, p.lng);
+              setMsg("Pin set to where you're standing ✓");
+            } catch (e) {
+              setMsg(e instanceof Error ? e.message : "Couldn't get your location");
+            }
+          }}
+        >
+          📍 I&apos;m here — set the pin to my location
+        </button>
+      )}
       <div className="mt-3 flex gap-2">
         <input id={`pin-link-${cafe.id}`} className="input" placeholder="Paste a Google Maps link" value={link} onChange={(e) => setLink(e.target.value)} />
         <button
