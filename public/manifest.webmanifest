@@ -1,0 +1,26 @@
+{
+  "name": "Cafe Job Finder",
+  "short_name": "Cafe Jobs",
+  "description": "Find Seattle cafes, track walk-ins and follow-ups, and plan walk-in routes.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f7f3ee",
+  "theme_color": "#6f3f22",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "share_target": {
+    "action": "/add",
+    "method": "GET",
+    "params": { "title": "title", "text": "text", "url": "url" }
+  },
+  "shortcuts": [
+    { "name": "Spotted a cafe", "url": "/add?tab=spotted", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Plan a route", "url": "/route", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}
