@@ -1,4 +1,4 @@
-import type { InteractionType, Stage } from "@/db/schema";
+import type { InteractionType, Stage } from "@/lib/types";
 import { addDays } from "./dates";
 
 export const QUICK_ACTIONS = [

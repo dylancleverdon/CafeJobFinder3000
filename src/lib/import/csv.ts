@@ -3,7 +3,7 @@ import { isChain } from "../chains";
 import { haversine, type LatLng } from "../route/geo";
 import { formatPhone, titleCase } from "../text";
 import { categorize } from "./seattleLicense";
-import type { Category } from "@/db/schema";
+import type { Category } from "@/lib/types";
 
 export type ColumnMap = Partial<Record<"name" | "address" | "city" | "zip" | "lat" | "lng" | "type" | "phone", string>>;
 

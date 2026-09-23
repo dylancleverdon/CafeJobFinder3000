@@ -1,4 +1,4 @@
-import type { Category, Stage } from "@/db/schema";
+import type { Category, Stage } from "@/lib/types";
 
 export const STAGE_LABEL: Record<Stage, string> = {
   discovered: "Discovered",

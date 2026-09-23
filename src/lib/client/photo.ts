@@ -1,11 +1,20 @@
-/** Shrinks a camera photo in the browser to a ~150 KB JPEG data URL. */
-export async function downscalePhoto(file: File, maxSide = 1024, quality = 0.72): Promise<string> {
+/** Shrinks a camera photo in the browser to a small JPEG data URL (≤ ~200 KB) so it fits in the app's storage. */
+export async function downscalePhoto(file: File, maxChars = 200_000): Promise<string> {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, maxSide / Math.max(bitmap.width, bitmap.height));
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-  canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+  let side = 900;
+  let quality = 0.65;
+  let out = "";
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const scale = Math.min(1, side / Math.max(bitmap.width, bitmap.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bitmap.width * scale);
+    canvas.height = Math.round(bitmap.height * scale);
+    canvas.getContext("2d")!.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    out = canvas.toDataURL("image/jpeg", quality);
+    if (out.length <= maxChars) break;
+    side = Math.round(side * 0.8);
+    quality = Math.max(0.45, quality - 0.05);
+  }
   bitmap.close();
-  return canvas.toDataURL("image/jpeg", quality);
+  return out;
 }

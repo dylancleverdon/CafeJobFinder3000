@@ -3,7 +3,7 @@
  * Pure functions — runs in the browser (the file is ~18 MB, too big to upload
  * to a serverless function) and in the seed build script.
  */
-import type { Category } from "@/db/schema";
+import type { Category } from "@/lib/types";
 import { isChain } from "../chains";
 import { formatPhone, titleCase, yyyymmddToIso } from "../text";
 import { placeKey, stripUnit } from "./dedupe";

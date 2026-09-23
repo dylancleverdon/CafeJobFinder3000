@@ -1,9 +1,9 @@
-import type { Category, PinQuality, Stage } from "@/db/schema";
+import type { Category, PinQuality, Stage } from "@/lib/types";
 import { isDue, isNewOpening } from "./dates";
 import { haversine, type LatLng } from "./route/geo";
 
 export type Rankable = {
-  id: number;
+  id: number | string;
   stage: Stage;
   nextActionAt: Date | string | null;
   interest: number;
