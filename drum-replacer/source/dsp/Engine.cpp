@@ -69,6 +69,7 @@ void Engine::reset()
 
     for (auto& p : pending)
         p.active = false;
+    numPending = 0;
     for (auto& v : voices)
     {
         v.active = false;
@@ -162,12 +163,16 @@ void Engine::process (float* const* channels, int numChannels, int numSamples) n
         if (hasHit)
             scheduleHit (hit);
 
-        for (auto& p : pending)
+        if (numPending > 0)
         {
-            if (p.active && p.start <= now)
+            for (auto& p : pending)
             {
-                p.active = false;
-                startVoice (p, now - p.start, i);
+                if (p.active && p.start <= now)
+                {
+                    p.active = false;
+                    --numPending;
+                    startVoice (p, now - p.start, i);
+                }
             }
         }
 
@@ -249,6 +254,7 @@ void Engine::scheduleHit (const Hit& hit) noexcept
         return;
 
     *slot = { true, start, velocity, dbToGain (gainDb) };
+    ++numPending;
 
     meterHit = std::max (meterHit, velocity);
     sharedHitCount.fetch_add (1, std::memory_order_relaxed);

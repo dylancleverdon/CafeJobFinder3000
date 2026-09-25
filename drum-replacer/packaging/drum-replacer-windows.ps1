@@ -101,10 +101,11 @@
     function Register-Updater {
         $action = New-ScheduledTaskAction -Execute "powershell.exe" `
             -Argument "-NoProfile -NonInteractive -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$Updater`" update"
-        $triggers = @(
-            (New-ScheduledTaskTrigger -AtStartup),
-            (New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 10))
-        )
+        # Every day, repeating every 10 minutes for the whole day (= always), plus at start-up.
+        $everyTenMinutes = New-ScheduledTaskTrigger -Daily -At "00:00"
+        $everyTenMinutes.Repetition = (New-ScheduledTaskTrigger -Once -At "00:00" -RepetitionInterval (New-TimeSpan -Minutes 10) `
+            -RepetitionDuration (New-TimeSpan -Days 1)).Repetition
+        $triggers = @((New-ScheduledTaskTrigger -AtStartup), $everyTenMinutes)
         $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
         $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries -StartWhenAvailable `
             -ExecutionTimeLimit (New-TimeSpan -Minutes 15)

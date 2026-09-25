@@ -116,6 +116,7 @@ private:
     std::int64_t delayMask = 0;
 
     std::array<Pending, 64> pending {};
+    int numPending = 0;
     std::array<Voice, maxVoices> voices {};
     std::uint64_t voiceCounter = 0;
     std::array<std::uint32_t, 128> roundRobin {};
