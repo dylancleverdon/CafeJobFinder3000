@@ -32,3 +32,9 @@ One single-file web app (`npm run build`) shipped two ways:
 - Pure logic in `src/lib/**` with Vitest tests in `tests/`. The store (`src/store/store.ts`) is tested with the localStorage backend.
 - UI: React function components in `src/ui/`, with Tailwind tokens from `src/ui/styles.css` (`bg-card`, `text-muted`, `btn-primary`…), in both light and dark mode.
 - No `confirm()`/`alert()` (they don't work in artifacts). Use `ConfirmButton`. Phone numbers get `CopyText`.
+
+## Drum Replacer (separate project in `drum-replacer/`)
+An Ableton plugin (VST3 + AU, JUCE 8, C++), unrelated to the cafe app. See `drum-replacer/README.md`.
+- **Shipping = push a change under `drum-replacer/`** (any branch). `.github/workflows/drum-replacer.yml` builds Windows + Mac, runs the tests, pluginval and auval, and updates the `drum-replacer` release (never marked "latest", so the APK link keeps working). The user's installed copy updates itself from that release every 10 minutes. Version = `1.0.<run number>`.
+- Before pushing: `cmake -S drum-replacer -B build -DDR_BUILD_CHECK=ON && cmake --build build`, then `./build/drum_replacer_tests` and `xvfb-run -a ./build/DrumReplacerCheck_artefacts/Release/DrumReplacerCheck shot.png` (look at the screenshot).
+- Never rename parameter IDs (`source/plugin/PluginProcessor.h`), the `Sound`/`Sample` state fields, the plugin codes (`Dcln`/`Drep`) or bundle ID: Ableton projects depend on them. Don't rename the release tag, asset names or `version.txt`: installed updaters depend on them.

@@ -10,6 +10,8 @@ and tap **Install**. The first time, Android asks you to allow installing from y
 
 **Also available inside Claude:** https://claude.ai/artifact/MDGaFSA4CQRXsb3jmomuLt (private to you). It keeps its own separate data. Use **More → Download backup / Restore** to move data between the two.
 
+> Also in this repo: **[Drum Replacer](drum-replacer/README.md)**, a drum replacer plugin for Ableton Live that keeps itself up to date.
+
 ## What it does
 
 - **988 Seattle cafes built in.** These are all the coffee shops, bakeries, bagel and breakfast spots, tea/boba bars and other drink bars from the city's public business-license list (Sept 2026), with **Chain** and **New opening** badges. No cafe apps or APIs are used.

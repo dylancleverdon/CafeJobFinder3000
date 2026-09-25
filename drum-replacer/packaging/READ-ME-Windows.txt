@@ -1,0 +1,15 @@
+DRUM REPLACER for Ableton Live (Windows)
+========================================
+
+Easiest (installs AND keeps it up to date automatically):
+  Right-click the Start button, choose "Terminal (Admin)", paste this line and press Enter:
+
+  irm https://github.com/dylancleverdon/CafeJobFinder3000/releases/download/drum-replacer/drum-replacer-windows.ps1 | iex
+
+  You can do this instead of using the files in this zip.
+
+By hand (no automatic updates):
+  Copy the "Drum Replacer.vst3" folder to  C:\Program Files\Common Files\VST3
+
+Then in Ableton: Options > Settings (or Preferences) > Plug-Ins > turn on "Use VST3 Plug-in System Folder"
+and click Rescan. Search the browser for "Drum Replacer".

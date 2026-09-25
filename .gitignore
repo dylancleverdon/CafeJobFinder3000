@@ -4,3 +4,4 @@ data/raw/
 *.tsbuildinfo
 test-results/
 playwright-report/
+drum-replacer/build/

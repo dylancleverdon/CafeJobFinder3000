@@ -1,0 +1,204 @@
+# Builds the Drum Replacer plugin (for Ableton) on Windows and Mac, tests it, and
+# publishes it as the "drum-replacer" GitHub release. Installed copies check that
+# release every 10 minutes and update themselves, so every push that changes
+# drum-replacer/ reaches the user without a re-download.
+#
+# Download links that always point at the newest build:
+#   https://github.com/dylancleverdon/CafeJobFinder3000/releases/download/drum-replacer/DrumReplacer-Windows.zip
+#   https://github.com/dylancleverdon/CafeJobFinder3000/releases/download/drum-replacer/DrumReplacer-Mac.zip
+name: Drum Replacer plugin
+
+on:
+  push:
+    paths:
+      - "drum-replacer/**"
+      - ".github/workflows/drum-replacer.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: drum-replacer
+  cancel-in-progress: true # the newest push wins
+
+env:
+  VERSION: 1.0.${{ github.run_number }}
+  PLUGINVAL: https://github.com/Tracktion/pluginval/releases/download/v1.0.4
+
+jobs:
+  checks:
+    name: Tests (engine, plugin, pluginval)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build xvfb libasound2-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxcomposite-dev libxext-dev libxrender-dev libfreetype-dev libfontconfig1-dev libgl1-mesa-dev
+
+      - name: Configure
+        run: cmake -S drum-replacer -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDR_BUILD_CHECK=ON -DDR_BUILD_NUMBER=${{ github.run_number }}
+
+      - name: Build
+        run: cmake --build build --target drum_replacer_tests DrumReplacerCheck DrumReplacer_VST3
+
+      - name: Engine tests
+        run: ./build/drum_replacer_tests
+
+      - name: Plugin check (samples, saving, MIDI, screenshot)
+        run: xvfb-run -a ./build/DrumReplacerCheck_artefacts/Release/DrumReplacerCheck screenshot.png
+
+      - name: pluginval
+        run: |
+          curl -fsSL -o pluginval.zip "$PLUGINVAL/pluginval_Linux.zip"
+          unzip -q pluginval.zip
+          xvfb-run -a ./pluginval --strictness-level 10 --validate-in-process "build/DrumReplacer_artefacts/Release/VST3/Drum Replacer.vst3"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshot
+          path: screenshot.png
+
+  windows:
+    name: Windows (VST3)
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S drum-replacer -B build -DDR_BUILD_TESTS=OFF -DDR_BUILD_NUMBER=${{ github.run_number }}
+
+      - name: Build
+        run: cmake --build build --config Release --target DrumReplacer_VST3 --parallel
+
+      - name: pluginval
+        shell: bash
+        run: |
+          curl -fsSL -o pluginval.zip "$PLUGINVAL/pluginval_Windows.zip"
+          7z x -y pluginval.zip > /dev/null
+          ./pluginval.exe --strictness-level 10 --validate-in-process "build/DrumReplacer_artefacts/Release/VST3/Drum Replacer.vst3"
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory package | Out-Null
+          Copy-Item -Recurse "build/DrumReplacer_artefacts/Release/VST3/Drum Replacer.vst3" package/
+          Copy-Item drum-replacer/packaging/drum-replacer-windows.ps1 package/
+          Copy-Item drum-replacer/packaging/READ-ME-Windows.txt "package/READ ME.txt"
+          Compress-Archive -Path package/* -DestinationPath DrumReplacer-Windows.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zip-windows
+          path: DrumReplacer-Windows.zip
+
+  mac:
+    name: Mac (VST3 + AU, Intel and Apple Silicon)
+    runs-on: macos-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -S drum-replacer -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" -DDR_BUILD_TESTS=OFF -DDR_BUILD_NUMBER=${{ github.run_number }}
+
+      - name: Build
+        run: cmake --build build --config Release --target DrumReplacer_VST3 DrumReplacer_AU --parallel
+
+      - name: Sign (ad hoc, so macOS will load it)
+        run: |
+          for p in "build/DrumReplacer_artefacts/Release/VST3/Drum Replacer.vst3" "build/DrumReplacer_artefacts/Release/AU/Drum Replacer.component"; do
+            codesign --force --deep --sign - "$p"
+            codesign --verify --verbose "$p"
+          done
+
+      - name: pluginval
+        run: |
+          curl -fsSL -o pluginval.zip "$PLUGINVAL/pluginval_macOS.zip"
+          unzip -q pluginval.zip
+          pluginval.app/Contents/MacOS/pluginval --strictness-level 10 --validate-in-process "build/DrumReplacer_artefacts/Release/VST3/Drum Replacer.vst3"
+
+      - name: auval (Audio Unit check)
+        run: |
+          mkdir -p ~/Library/Audio/Plug-Ins/Components
+          cp -R "build/DrumReplacer_artefacts/Release/AU/Drum Replacer.component" ~/Library/Audio/Plug-Ins/Components/
+          killall -9 AudioComponentRegistrar || true
+          auval -strict -v aufx Drep Dcln
+
+      - name: Package
+        run: |
+          mkdir package
+          ditto "build/DrumReplacer_artefacts/Release/VST3/Drum Replacer.vst3" "package/Drum Replacer.vst3"
+          ditto "build/DrumReplacer_artefacts/Release/AU/Drum Replacer.component" "package/Drum Replacer.component"
+          cp drum-replacer/packaging/drum-replacer-mac.sh package/
+          cp drum-replacer/packaging/READ-ME-Mac.txt "package/READ ME.txt"
+          (cd package && ditto -c -k --sequesterRsrc . ../DrumReplacer-Mac.zip)
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zip-mac
+          path: DrumReplacer-Mac.zip
+
+  release:
+    name: Publish (installed copies update from here)
+    needs: [checks, windows, mac]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: zip-*
+          path: dist
+          merge-multiple: true
+
+      - name: Collect files
+        run: |
+          cp drum-replacer/packaging/drum-replacer-mac.sh drum-replacer/packaging/drum-replacer-windows.ps1 dist/
+          echo "$VERSION" > dist/version.txt
+          ls -la dist
+          base="https://github.com/${GITHUB_REPOSITORY}/releases/download/drum-replacer"
+          cat > notes.md << EOF
+          **Drum Replacer $VERSION**: a drum replacer plugin for Ableton Live (VST3 on Windows and Mac, plus Audio Unit on Mac).
+
+          ### Install once, then it updates itself
+
+          **Mac:** open *Terminal*, paste this line and press Return:
+          \`\`\`
+          curl -fsSL $base/drum-replacer-mac.sh | bash
+          \`\`\`
+
+          **Windows:** right-click the Start button, choose **Terminal (Admin)**, paste this line and press Enter:
+          \`\`\`
+          irm $base/drum-replacer-windows.ps1 | iex
+          \`\`\`
+
+          Then in Ableton, open **Settings** (or *Preferences*) > **Plug-Ins**, turn on **Use VST3 Plug-in System Folders** (Mac: or **Audio Units**), click **Rescan**, and search the browser for "Drum Replacer".
+          From then on, new versions install automatically (on Windows as soon as Ableton is closed). Reopen Ableton to use them.
+
+          Built from commit ${GITHUB_SHA::7}.
+          EOF
+
+      - name: Publish the release
+        run: |
+          if gh release view drum-replacer > /dev/null 2>&1; then
+            git tag -f drum-replacer "$GITHUB_SHA"
+            git push -f origin refs/tags/drum-replacer
+            # version.txt goes last, so updaters only see the new version once its files are there.
+            gh release upload drum-replacer dist/DrumReplacer-Windows.zip dist/DrumReplacer-Mac.zip \
+              dist/drum-replacer-mac.sh dist/drum-replacer-windows.ps1 --clobber
+            gh release upload drum-replacer dist/version.txt --clobber
+            gh release edit drum-replacer --title "Drum Replacer $VERSION (Ableton plugin)" --notes-file notes.md --latest=false
+          else
+            gh release create drum-replacer dist/* --target "$GITHUB_SHA" \
+              --title "Drum Replacer $VERSION (Ableton plugin)" --notes-file notes.md --latest=false
+          fi
