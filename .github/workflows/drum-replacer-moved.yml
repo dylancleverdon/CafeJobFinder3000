@@ -1,0 +1,39 @@
+# One-time hand-over: the Drum Replacer plugin moved to dylancleverdon/drum-replacer-real.
+# Copies installed from this repo's "drum-replacer" release (1.0.x) check it every 10 minutes.
+# This puts the newest build from the new repo into that release; its updater points at the
+# new repo, so those copies move over by themselves. Safe to run again.
+name: Drum Replacer moved
+
+on:
+  push:
+    paths:
+      - ".github/workflows/drum-replacer-moved.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  hand-over:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      NEW: https://github.com/dylancleverdon/drum-replacer-real/releases/latest/download
+    steps:
+      - name: Copy the newest build into the old release
+        run: |
+          # Wait for the new repo's first release (its build takes about 20 minutes).
+          until curl -fsSL -o /dev/null "$NEW/version.txt"; do echo "Waiting for the new release..."; sleep 30; done
+          mkdir dist && cd dist
+          for f in DrumReplacer-Windows.zip DrumReplacer-Mac.zip drum-replacer-mac.sh drum-replacer-windows.ps1 version.txt; do
+            curl -fsSL --retry 3 -o "$f" "$NEW/$f"
+          done
+          grep -q drum-replacer-real drum-replacer-mac.sh && grep -q drum-replacer-real drum-replacer-windows.ps1
+          echo "Handing over at version $(cat version.txt)"
+          # version.txt goes last, so updaters only see the new version once its files are there.
+          gh release upload drum-replacer DrumReplacer-Windows.zip DrumReplacer-Mac.zip drum-replacer-mac.sh drum-replacer-windows.ps1 --clobber
+          gh release upload drum-replacer version.txt --clobber
+          gh release edit drum-replacer --title "Drum Replacer has moved" --latest=false --notes \
+            "Drum Replacer now lives at https://github.com/dylancleverdon/drum-replacer-real — get it from https://github.com/dylancleverdon/drum-replacer-real/releases/latest. Copies installed from here move there by themselves."
